@@ -1,0 +1,24 @@
+{% extends 'layouts/base.twig' %}
+
+{% block title %}Edit Pet{% endblock %}
+
+{% block content %}
+    <h1>Edit Pet</h1>
+    <form action="{{ route('pets.update', {id: pet.id}) }}" method="POST">
+        {{ csrf_field() }}
+        <input type="hidden" name="_method" value="PUT">
+        <div class="form-group">
+            <label for="name">Name:</label>
+            <input type="text" name="name" class="form-control" value="{{ pet.name }}" required>
+        </div>
+        <div class="form-group">
+            <label for="status">Status:</label>
+            <select name="status" class="form-control">
+                <option value="available" {% if pet.status == 'available' %}selected{% endif %}>Available</option>
+                <option value="pending" {% if pet.status == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="sold" {% if pet.status == 'sold' %}selected{% endif %}>Sold</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary mt-2">Save Changes</button>
+    </form>
+{% endblock %}

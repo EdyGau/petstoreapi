@@ -1,0 +1,66 @@
+{% extends "layouts.base" %}
+
+{% block content %}
+    <div class="container mt-4">
+        <h2>Pet Management</h2>
+
+        <form method="GET" action="{{ route('pets.index') }}" class="mb-3">
+            <div class="row">
+                <div class="col-md-3">
+                    <select name="status" class="form-select" onchange="this.form.submit()">
+                        <option value="available" {% if statusFilter == 'available' %}selected{% endif %}>Available</option>
+                        <option value="pending" {% if statusFilter == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="sold" {% if statusFilter == 'sold' %}selected{% endif %}>Sold</option>
+                    </select>
+                </div>
+            </div>
+        </form>
+
+        <div class="row">
+            {% for pet in pets %}
+                <div class="col-md-3 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ pet.name }}</h5>
+                            <p class="card-text">Status: {{ pet.status }}</p>
+                            <div class="d-flex justify-content-between">
+                                <a href="{{ route('pets.edit', {'id': pet.id}) }}" class="btn btn-warning btn-sm">Edit</a>
+                                <form method="POST" action="{{ route('pets.destroy', {'id': pet.id}) }}" style="display:inline;">
+                                    {{ method_field('DELETE') }}
+                                    <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="col-12">
+                    <p class="text-center text-muted">No pets found matching the criteria.</p>
+                </div>
+            {% endfor %}
+        </div>
+
+        <nav>
+            <ul class="pagination justify-content-center">
+                {% if currentPage > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ route('pets.index', {'status': statusFilter, 'page': currentPage - 1}) }}">Previous</a>
+                    </li>
+                {% endif %}
+
+                {% for page in range(1, totalPages + 1) %}
+                    <li class="page-item {% if page == currentPage %}active{% endif %}">
+                        <a class="page-link" href="{{ route('pets.index', {'status': statusFilter, 'page': page}) }}">{{ page }}</a>
+                    </li>
+                {% endfor %}
+
+                {% if currentPage < totalPages %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ route('pets.index', {'status': statusFilter, 'page': currentPage + 1}) }}">Next</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+{% endblock %}

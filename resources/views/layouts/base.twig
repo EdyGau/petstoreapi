@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Pet Management{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(to right, #d0eaf0, #f8f9fa);
+        }
+
+        h1 {
+            font-size: 2.8rem;
+        }
+
+        .table-container {
+            box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            background: #fff;
+            padding: 15px;
+        }
+
+        .btn:hover {
+            transition: transform 0.2s ease-in-out;
+            transform: scale(1.1);
+        }
+
+        nav {
+            background-color: #0288d1 !important;
+        }
+
+        .table-container {
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            background: #ffffff;
+            padding: 20px;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease-in-out;
+        }
+
+        .sort-dropdown {
+            background: #0288d1;
+            color: #ffffff;
+            border: none;
+        }
+
+        .sort-dropdown:hover {
+            background: #01579b;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .pagination a {
+            padding: 8px 12px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .pagination a:hover {
+            background-color: #0056b3;
+        }
+
+    </style>
+</head>
+
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="{{ route('pets.index') }}">🐾 Pet Management</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav"
+                aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ route('pets.index') }}">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ route('pets.create') }}">Add Pet</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ route('about') }}">About</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    {% block content %}{% endblock %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const sortDropdown = document.getElementById('sortDropdown');
+        if (sortDropdown) {
+            sortDropdown.addEventListener('change', function () {
+                const sortBy = this.value;
+                const table = document.getElementById('petsTable');
+                const rows = Array.from(table.rows).slice(1);
+
+                if (sortBy === 'name') {
+                    rows.sort((a, b) => a.cells[1].innerText.localeCompare(b.cells[1].innerText));
+                } else if (sortBy === 'status') {
+                    rows.sort((a, b) => a.cells[2].innerText.localeCompare(b.cells[2].innerText));
+                }
+
+                rows.forEach(row => table.appendChild(row));
+            });
+        }
+    });
+</script>
+</body>
+
+</html>
