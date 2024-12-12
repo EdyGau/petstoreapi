@@ -38,9 +38,6 @@ class PetController extends Controller
     }
 
     /**
-     * Show the form to create a new pet.
-     */
-    /**
      * Display the form to create a new pet.
      */
     public function create()
@@ -53,6 +50,7 @@ class PetController extends Controller
      */
     public function store(Request $request)
     {
+        
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'status' => 'required|string|in:available,pending,sold',
@@ -95,9 +93,6 @@ class PetController extends Controller
         return redirect()->route('pets.index')->with('success', 'Pet updated successfully!');
     }
 
-    /**
-     * Delete a pet via PetService.
-     */
     public function destroy(int $id)
     {
         $this->petService->deletePet($id);
