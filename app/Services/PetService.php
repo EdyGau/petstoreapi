@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Clients\PetStoreClient;
+use Illuminate\Support\Facades\Http;
 
 class PetService
 {
@@ -29,11 +30,13 @@ class PetService
 
     public function createPet(array $data)
     {
-        try {
-            return $this->petClient->createPet($data);
-        } catch (\Exception $e) {
-            throw $e;
-        }
+        $payload = [
+            "id" => $data['id'] ?? 0,
+            "name" => $data['name'],
+            "status" => $data['status'],
+        ];
+
+        return $this->petClient->createPet($payload);
     }
 
     public function getPetById(int $id)

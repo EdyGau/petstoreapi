@@ -1,7 +1,5 @@
 <?php
 
-use App\Http\Controllers\PetController;
-use Illuminate\Support\Facades\Route;
 use OpenApi\Annotations as OA;
 
 /**

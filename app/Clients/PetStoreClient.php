@@ -45,15 +45,26 @@ class PetStoreClient
      * @return array|null
      * @throws Exception
      */
+    /**
+     * Creates a new pet.
+     *
+     * @param array $data
+     * @return array|null
+     * @throws Exception
+     */
     public function createPet(array $data): array|null
     {
+        var_dump($data);
         $response = Http::post(self::BASE_URL, $data);
 
         if ($response->successful()) {
+            var_dump('test');
+                var_dump($response->json());
+
             return $response->json();
         }
 
-        throw new \Exception('Error creating pet: ' . $response->body());
+        throw new Exception('Error creating pet: ' . $response->body());
     }
 
     /**
