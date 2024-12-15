@@ -1,11 +1,12 @@
 {% extends "layouts.base" %}
 
 {% block content %}
+
     <div class="container mt-4">
-        <h2>Pet Management</h2>
+        <h2 class="text-center mb-4">Pet Management 🐾</h2>
 
         <form method="GET" action="{{ route('pets.index') }}" class="mb-3">
-            <div class="row">
+            <div class="row justify-content-center">
                 <div class="col-md-3">
                     <select name="status" class="form-select" onchange="this.form.submit()">
                         <option value="available" {% if statusFilter == 'available' %}selected{% endif %}>Available</option>
@@ -19,13 +20,13 @@
         <div class="row">
             {% for pet in pets %}
                 <div class="col-md-3 mb-4">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <h5 class="card-title">{{ pet.name }}</h5>
-                            <p class="card-text">Status: {{ pet.status }}</p>
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body text-center">
+                            <h5 class="card-title text-primary">{{ pet.name }}</h5>
+                            <p class="card-text text-muted">Status: {{ pet.status }}</p>
                             <div class="d-flex justify-content-between">
                                 <a href="{{ route('pets.edit', {'id': pet.id}) }}" class="btn btn-warning btn-sm">Edit</a>
-                                <form method="POST" action="{{ route('pets.destroy', {'id': pet.id}) }}" style="display:inline;">
+                                <form method="POST" action="{{ route('pets.destroy', {'id': pet.id}) }}">
                                     {{ method_field('DELETE') }}
                                     <input type="hidden" name="_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-danger btn-sm">Delete</button>
@@ -35,14 +36,14 @@
                     </div>
                 </div>
             {% else %}
-                <div class="col-12">
-                    <p class="text-center text-muted">No pets found matching the criteria.</p>
+                <div class="col-12 text-center mt-5 text-muted">
+                    <p>No pets found matching the criteria 🐾</p>
                 </div>
             {% endfor %}
         </div>
 
-        <nav>
-            <ul class="pagination justify-content-center">
+        <nav class="mt-4">
+            <ul class="pagination">
                 {% if currentPage > 1 %}
                     <li class="page-item">
                         <a class="page-link" href="{{ route('pets.index', {'status': statusFilter, 'page': currentPage - 1}) }}">Previous</a>

@@ -3,54 +3,141 @@
 namespace App\Services;
 
 use App\Clients\PetStoreClient;
-use Illuminate\Support\Facades\Http;
+use App\DTO\PetDTO;
+use App\Events\PetCreated;
+use App\Events\PetDeleted;
+use App\Events\PetUpdated;
+use App\Exceptions\PetApiException;
+use Illuminate\Support\Facades\Log;
 
 class PetService
 {
-    private PetStoreClient $petClient;
+    private PetStoreClient $client;
 
-    public function __construct(PetStoreClient $petClient)
+    public function __construct()
     {
-        $this->petClient = $petClient;
+        $this->client = new PetStoreClient();
     }
 
-    public function fetchPaginatedPets(string $status, int $currentPage): array
+    /**
+     * Fetch pets based on status with pagination.
+     *
+     * @throws \Exception
+     */
+    public function fetchPets(string $status, int $page = 1, int $perPage = 10): array
     {
-        $perPage = 10;
-        $pets = $this->petClient->getFilteredPets($status) ?? [];
+        try {
+            $responseData = $this->client->getFilteredPets($status);
 
-        $paginatedPets = collect($pets)->forPage($currentPage, $perPage);
+            $totalItems = count($responseData);
+            $paginatedItems = array_slice($responseData, ($page - 1) * $perPage, $perPage);
 
-        return [
-            'pets' => $paginatedPets,
-            'currentPage' => $currentPage,
-            'totalPages' => ceil(count($pets) / $perPage),
-        ];
+            return [
+                'pets' => $paginatedItems,
+                'currentPage' => $page,
+                'totalPages' => ceil($totalItems / $perPage),
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error fetching pets', ['error' => $e->getMessage()]);
+            throw $e;
+        }
     }
 
-    public function createPet(array $data)
-    {
-        $payload = [
-            "id" => $data['id'] ?? 0,
-            "name" => $data['name'],
-            "status" => $data['status'],
-        ];
+    /**
+     * Create a new pet.
+     * @throws PetApiException
+     */
+//    public function createPet(array $data): PetDTO
+//    {
+//        try {
+//            $responseData = $this->client->createPet($data);
+//
+//            Log::info('Response received from client', ['response' => $responseData]);
+//
+//            if (!$responseData) {
+//                throw new PetApiException('Empty response received.');
+//            }
+//
+//            event(new PetCreated(PetDTO::fromArray($responseData)));
+//
+//            return PetDTO::fromArray($responseData);
+//        } catch (\Exception $e) {
+//            Log::error('Service encountered an exception during createPet', ['error' => $e->getMessage()]);
+//            throw new PetApiException("Failed to create pet.");
+//        }
+//    }
 
-        return $this->petClient->createPet($payload);
+    public function createPet(array $data): PetDTO
+    {
+        try {
+            $responseData = $this->client->createPet($data);
+
+            if (empty($responseData) || !isset($responseData['id'])) {
+                throw new PetApiException('Invalid response received from API.');
+            }
+
+            Log::info('Response received from API:', ['response' => $responseData]);
+
+            $petDTO = PetDTO::fromArray($responseData);
+
+            event(new PetCreated($petDTO));
+
+            return $petDTO;
+        } catch (\Exception $e) {
+            Log::error('Service encountered an exception during createPet', ['error' => $e->getMessage()]);
+            throw new PetApiException("Failed to create pet.");
+        }
     }
 
-    public function getPetById(int $id)
+
+
+    /**
+     * Update an existing pet.
+     *
+     * @throws PetApiException
+     */
+    public function updatePet(array $data): PetDTO
     {
-        return $this->petClient->getPetById($id);
+        try {
+            $responseData = $this->client->updatePet($data);
+
+            event(new PetUpdated(PetDTO::fromArray($responseData)));
+
+            return PetDTO::fromArray($responseData);
+        } catch (\Exception $e) {
+            Log::error('Error updating pet', ['error' => $e->getMessage()]);
+            throw new PetApiException("Failed to update pet.");
+        }
     }
 
-    public function updatePet(array $data)
+    /**
+     * Fetch a specific pet by ID
+     *
+     * @throws PetApiException
+     */
+    public function getPetById(int $id): PetDTO
     {
-        return $this->petClient->updatePet($data);
+        try {
+            $responseData = $this->client->getPetById($id);
+            return PetDTO::fromArray($responseData);
+        } catch (\Exception $e) {
+            Log::error('Error fetching pet by ID', ['error' => $e->getMessage()]);
+            throw new PetApiException("Failed to fetch pet by ID.");
+        }
     }
 
-    public function deletePet(int $id)
+    /**
+     * Delete a specific pet by ID
+     * @throws PetApiException
+     */
+    public function deletePet(int $id): bool
     {
-        return $this->petClient->deletePet($id);
+        try {
+            $result = $this->client->deletePet($id);
+            return $result;
+        } catch (\Exception $e) {
+            Log::error('Error deleting pet', ['error' => $e->getMessage()]);
+            throw new PetApiException("Failed to delete pet.");
+        }
     }
 }

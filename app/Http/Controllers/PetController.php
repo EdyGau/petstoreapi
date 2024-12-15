@@ -2,19 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use AllowDynamicProperties;
+use App\Http\Requests\PetRequest;
 use App\Services\PetService;
+use App\Exceptions\PetStoreClientException;
 use Illuminate\Http\Request;
 use OpenApi\Annotations as OA;
+use Illuminate\Support\Facades\Log;
 
+#[AllowDynamicProperties]
 class PetController extends Controller
 {
     private PetService $petService;
 
-    /**
-     * Inject PetService into the controller.
-     *
-     * @param PetService $petService
-     */
     public function __construct(PetService $petService)
     {
         $this->petService = $petService;
@@ -52,180 +52,109 @@ class PetController extends Controller
      */
     public function index(Request $request)
     {
-        $status = $request->get('status', 'available');
-        $currentPage = (int) $request->get('page', 1);
+        try {
+            $status = $request->get('status', 'available');
+            $currentPage = (int) $request->get('page', 1);
 
-        $result = $this->petService->fetchPaginatedPets($status, $currentPage);
+            if (!in_array($status, ['available', 'pending', 'sold'])) {
+                return back()->withErrors(['error' => 'Invalid status value']);
+            }
 
-        return view('pets.index', [
-            'pets' => $result['pets'],
-            'currentPage' => $result['currentPage'],
-            'totalPages' => $result['totalPages'],
-            'statusFilter' => $status,
-        ]);
+            if ($currentPage < 1) {
+                return back()->withErrors(['error' => 'Invalid page value']);
+            }
+
+            $result = $this->petService->fetchPets($status, $currentPage);
+
+            Log::info('Pets index request successful.', ['status' => $status, 'currentPage' => $currentPage]);
+
+            return view('pets.index', [
+                'pets' => $result['pets'],
+                'currentPage' => $result['currentPage'],
+                'totalPages' => $result['totalPages'],
+                'statusFilter' => $status,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch pets: ', ['error' => $e->getMessage()]);
+            return back()->withErrors(['error' => 'Unable to fetch pets']);
+        }
     }
 
-    /**
-     * @OA\Get(
-     *     path="/pets/create",
-     *     summary="Display the form to create a new pet",
-     *     @OA\Response(
-     *         response=200,
-     *         description="Form to create a new pet"
-     *     )
-     * )
-     */
     public function create()
     {
         return view('pets.create');
     }
 
-    /**
-     * @OA\Post(
-     *     path="/pets",
-     *     summary="Create a new pet",
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             @OA\Property(property="name", type="string"),
-     *             @OA\Property(property="status", type="string", enum={"available","pending","sold"})
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=201,
-     *         description="Pet created successfully"
-     *     ),
-     *     @OA\Response(
-     *         response=400,
-     *         description="Validation error"
-     *     )
-     * )
-     */
-    public function store(Request $request)
+    public function store(PetRequest $request)
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'status' => 'required|in:available,pending,sold',
-        ]);
+        try {
+            $data = $request->validated();
 
-        $response = $this->petService->createPet($data);
+            $createdPet = $this->petService->createPet($data);
 
-        if (isset($response['code'])) {
-            return back()->withErrors(['error' => 'Failed to add pet: ' . $response['message']]);
+            Log::info('Pet creation successful.', [
+                'data_sent' => $data,
+                'response_received' => $createdPet,
+            ]);
+
+            return redirect()->route('pets.index')->with('success', 'Pet added successfully!');
+        } catch (PetStoreClientException $e) {
+            Log::error('Failed to add pet: ', ['error' => $e->getMessage()]);
+            return back()->withErrors(['error' => $e->getMessage()]);
+        } catch (\Exception $e) {
+            Log::error('Unexpected error adding pet: ', ['error' => $e->getMessage()]);
+            return back()->withErrors(['error' => 'Unexpected error occurred.']);
         }
-
-        return redirect()->route('pets.index')->with('success', 'Pet added successfully!');
     }
 
-    /**
-     * @OA\Get(
-     *     path="/pets/{id}/edit",
-     *     summary="Display the form to edit a pet",
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         description="ID of the pet to edit",
-     *         required=true,
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Form to edit the pet"
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Pet not found"
-     *     )
-     * )
-     */
     public function edit(int $id)
     {
-        $pet = $this->petService->getPetById($id);
+        try {
+            Log::info('Fetching pet for edit', ['id' => $id]);
+            $pet = $this->petService->getPetById($id);
 
-        if (!$pet) {
-            return redirect()->route('pets.index')->with('error', 'Pet not found');
+            if (!$pet) {
+                return redirect()->route('pets.index')->withErrors(['error' => 'Pet not found']);
+            }
+
+            return view('pets.edit', compact('pet'));
+        } catch (PetStoreClientException $e) {
+            Log::error('Error fetching pet: ', ['error' => $e->getMessage()]);
+            return redirect()->route('pets.index')->withErrors(['error' => 'Unable to fetch pet details']);
         }
-
-        return view('pets.edit', compact('pet'));
     }
 
-    /**
-     * @OA\Put(
-     *     path="/pets/{id}",
-     *     summary="Update a pet",
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         description="ID of the pet to update",
-     *         required=true,
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             @OA\Property(property="name", type="string"),
-     *             @OA\Property(property="status", type="string", enum={"available","pending","sold"})
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Pet updated successfully"
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Pet not found"
-     *     )
-     * )
-     */
     public function update(Request $request, int $id)
     {
-        $data = $request->validate([
-            'name' => 'required|string',
-            'status' => 'required|string|in:available,pending,sold',
-        ]);
-        $data['id'] = $id;
+        try {
+            $data = $request->all();
+            $data['id'] = $id;
 
-        $this->petService->updatePet($data);
-        return redirect()->route('pets.index')->with('success', 'Pet updated successfully!');
+            $this->petService->updatePet($data);
+
+            Log::info('Pet update successful.', ['data' => $data]);
+
+            return redirect()->route('pets.index')->with('success', 'Pet updated successfully!');
+        } catch (PetStoreClientException $e) {
+            Log::error('Error updating pet: ', ['error' => $e->getMessage()]);
+            return back()->withErrors(['error' => $e->getMessage()]);
+        }
     }
 
-    /**
-     * @OA\Delete(
-     *     path="/pets/{id}",
-     *     summary="Delete a pet",
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         description="ID of the pet to delete",
-     *         required=true,
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Pet deleted successfully"
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Pet not found"
-     *     )
-     * )
-     */
     public function destroy(int $id)
     {
-        $this->petService->deletePet($id);
-        return redirect()->route('pets.index')->with('success', 'Pet deleted successfully!');
+        try {
+            $this->petService->deletePet($id);
+
+            Log::info('Pet deletion successful.', ['id' => $id]);
+
+            return redirect()->route('pets.index')->with('success', 'Pet deleted successfully!');
+        } catch (PetStoreClientException $e) {
+            Log::error('Error deleting pet: ', ['error' => $e->getMessage()]);
+            return redirect()->route('pets.index')->withErrors(['error' => $e->getMessage()]);
+        }
     }
 
-    /**
-     * @OA\Get(
-     *     path="/about",
-     *     summary="About this application",
-     *     @OA\Response(
-     *         response=200,
-     *         description="About page"
-     *     )
-     * )
-     */
     public function about()
     {
         return view('layouts.about');
