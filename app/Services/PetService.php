@@ -47,26 +47,6 @@ class PetService
      * Create a new pet.
      * @throws PetApiException
      */
-//    public function createPet(array $data): PetDTO
-//    {
-//        try {
-//            $responseData = $this->client->createPet($data);
-//
-//            Log::info('Response received from client', ['response' => $responseData]);
-//
-//            if (!$responseData) {
-//                throw new PetApiException('Empty response received.');
-//            }
-//
-//            event(new PetCreated(PetDTO::fromArray($responseData)));
-//
-//            return PetDTO::fromArray($responseData);
-//        } catch (\Exception $e) {
-//            Log::error('Service encountered an exception during createPet', ['error' => $e->getMessage()]);
-//            throw new PetApiException("Failed to create pet.");
-//        }
-//    }
-
     public function createPet(array $data): PetDTO
     {
         try {
